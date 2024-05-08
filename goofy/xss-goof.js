@@ -3,7 +3,6 @@ const router = express.Router()
 
 router.get('/greeting', (req, res) => {
     const { name }  = req.query;
-    res.setHeader('content-type', 'application/json; charset=utf-8')
     res.send('<h1> Hello :'+ name +"</h1>")
 })
 
