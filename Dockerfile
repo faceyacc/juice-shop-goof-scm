@@ -1,33 +1,52 @@
-# Start with a base image with known vulnerabilities
-FROM ubuntu:16.04
+FROM ubuntu:14.04
 
-# Set environment variables (could expose sensitive information)
 ENV APP_SECRET=mysecretpassword
+ENV DB_PASSWORD=mydbpassword
 
-# Install packages with known vulnerabilities
 RUN apt-get update && \
     apt-get install -y \
+    openssl \
     wget \
     curl \
-    openssl \
+    apache2 \
+    php5 \
+    mysql-server \
+    nodejs \
+    npm \
+    ruby \
+    python2.7 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a user with weak password and give it root privileges
 RUN useradd -ms /bin/bash vulnerableuser && echo "vulnerableuser:password123" | chpasswd && adduser vulnerableuser sudo
 
-# Expose a default port without specifying the protocol
-EXPOSE 8080
-
-# Copy application files to the container
 COPY . /app
 
-# Set a working directory
 WORKDIR /app
 
-# Install application dependencies (using pip without any versioning)
-RUN apt-get update && \
-    apt-get install -y python3-pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+RUN npm install
 
-# Run the application with root privileges
-CMD ["python3", "app.py"]
+RUN apt-get update && \
+    apt-get install -y \
+    vsftpd \
+    openssh-server \
+    proftpd-basic \
+    bind9 \
+    dnsutils \
+    samba \
+    telnet \
+    rsh-client \
+    rsh-server \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN echo "root:rootpassword" | chpasswd
+RUN mkdir /var/run/sshd
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+EXPOSE 80 443 22 21 53 139 445 3306 6379 11211
+
+CMD ["/bin/bash"]
+
+RUN echo "<?php phpinfo(); ?>" > /var/www/html/index.php
+
+CMD service apache2 start && service ssh start && bash
