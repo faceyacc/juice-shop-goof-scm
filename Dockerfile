@@ -1,43 +1,33 @@
-FROM node:20-buster as installer
-COPY . /juice-shop
-WORKDIR /juice-shop
-RUN npm i -g typescript ts-node
-RUN npm install --omit=dev --unsafe-perm
-RUN npm dedupe
-RUN rm -rf frontend/node_modules
-RUN rm -rf frontend/.angular
-RUN rm -rf frontend/src/assets
-RUN mkdir logs
-RUN chown -R 65532 logs
-RUN chgrp -R 0 ftp/ frontend/dist/ logs/ data/ i18n/
-RUN chmod -R g=u ftp/ frontend/dist/ logs/ data/ i18n/
-RUN rm data/chatbot/botDefaultTrainingData.json || true
-RUN rm ftp/legal.md || true
-RUN rm i18n/*.json || true
+# Start with a base image with known vulnerabilities
+FROM ubuntu:16.04
 
-ARG CYCLONEDX_NPM_VERSION=latest
-RUN npm install -g @cyclonedx/cyclonedx-npm@$CYCLONEDX_NPM_VERSION
-RUN npm run sbom
+# Set environment variables (could expose sensitive information)
+ENV APP_SECRET=mysecretpassword
 
-# workaround for libxmljs startup error
-FROM node:20-buster as libxmljs-builder
-WORKDIR /juice-shop
-RUN apt-get update && apt-get install -y build-essential python3
-COPY --from=installer /juice-shop/node_modules ./node_modules
-RUN rm -rf node_modules/libxmljs2/build && \
-  cd node_modules/libxmljs2 && \
-  npm run build
+# Install packages with known vulnerabilities
+RUN apt-get update && \
+    apt-get install -y \
+    wget \
+    curl \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM gcr.io/distroless/nodejs20-debian11
-ARG BUILD_DATE
-ARG VCS_REF
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.version="1.0.0"
-LABEL org.opencontainers.image.source="https://github.com/somerset-inc/juice-shop-goof"
-LABEL io.snyk.containers.image.dockerfile="/Dockerfile"
-WORKDIR /juice-shop
-COPY --from=installer --chown=65532:0 /juice-shop .
-COPY --chown=65532:0 --from=libxmljs-builder /juice-shop/node_modules/libxmljs2 ./node_modules/libxmljs2
-USER 65532
-EXPOSE 3000
-CMD ["/juice-shop/build/app.js"]
+# Create a user with weak password and give it root privileges
+RUN useradd -ms /bin/bash vulnerableuser && echo "vulnerableuser:password123" | chpasswd && adduser vulnerableuser sudo
+
+# Expose a default port without specifying the protocol
+EXPOSE 8080
+
+# Copy application files to the container
+COPY . /app
+
+# Set a working directory
+WORKDIR /app
+
+# Install application dependencies (using pip without any versioning)
+RUN apt-get update && \
+    apt-get install -y python3-pip && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+# Run the application with root privileges
+CMD ["python3", "app.py"]
