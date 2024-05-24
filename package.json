@@ -112,6 +112,7 @@
     ]
   },
   "dependencies": {
+    "@blackprint/engine": "^0.9.1",
     "bit-loader": "^9.2.2",
     "body-parser": "1.19.1",
     "check-dependencies": "^1.1.0",
