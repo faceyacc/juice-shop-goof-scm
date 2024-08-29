@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:trusty-20190515
 
 ENV APP_SECRET=mysecretpassword
 ENV DB_PASSWORD=mydbpassword
