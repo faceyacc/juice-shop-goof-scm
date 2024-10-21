@@ -6,7 +6,7 @@ router.get('/greeting', (req, res) => {
     res.send('<h1> Hello :'+ name +"</h1>")
 })
 
-router.get('/greet-template-', (req,res) => {
+router.get('/greet-template-snyk-demo', (req,res) => {
     name = req.query.name
     res.render('index', { user_name: name});
 })
